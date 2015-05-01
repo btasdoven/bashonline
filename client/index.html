@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<!-- saved from url=(0050)http://tasdoven.ceng.metu.edu.tr/listen80/new.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="terminal-parser.js"></script>
+<script src="terminal-ctrl.js"></script>
+<style>
+
+* {
+	-webkit-font-smoothing: antialiased;
+	font-family: monospace, sans-serif;
+	font-size : 14px;
+	color : rgb(227, 227, 217);
+	background-color: rgb(48, 10, 36); 
+	padding:0;
+	margin:0;
+	vertical-align: middle;
+	overflow:hidden;
+}
+
+.bold {
+	font-weight : bold;
+}
+
+.italic {
+	font-style : italic;
+}
+
+.underlined {
+	text-decoration: underline;
+}
+
+.char {
+	height : 16px;
+	width : 1ch;	/* 8.42118 */
+	display:inline-block;
+}
+
+input[type='text'] {
+	border : 0 none;
+	overflow : none;
+}
+			
+</style>
+<script type="text/javascript">
+
+var ws;
+
+var utfstate = 0;
+function initialize() {
+  if ("WebSocket" in window) {     
+     ws = new WebSocket("ws://144.122.71.77:8080/");
+     ws.onopen = function()
+     {
+     	console.log("connection is opened.");
+     };
+     
+     ws.onmessage = function (e) 
+     { 
+		data = decodeURIComponent(e.data);
+        //console.log(data);
+	    Process(data);
+     }; 
+     
+     ws.onclose = function()
+     { 
+        console.log("Connection is closed..."); 
+     };
+     
+     ws.onerror = function (error) {
+		console.log('WebSocket Error ');
+		console.log(error);
+	 }
+  }
+  else {
+     alert("WebSocket NOT supported by your Browser!");
+  }	
+}
+
+
+var command = ""
+
+$(document).ready( function() {
+	
+	init();
+		
+	$(document).bind("keydown", function(e) { 
+		//console.log(e);
+
+		if (e.ctrlKey == true && e.keyCode != 17) {
+			key = e.keyCode - 65 + 1;
+			ws.send(String.fromCharCode(key));
+			e.preventDefault();
+		}
+		
+		switch (e.keyCode) {
+			case 8:		// BS
+			case 9:		// TAB
+			case 27:	// ESC
+				ws.send(String.fromCharCode(e.keyCode));
+				e.preventDefault();
+				break;
+			
+			case 35: 	// END
+				ws.send(String.fromCharCode(5));
+				e.preventDefault();
+				break;
+			case 36:	// HOME
+				ws.send(String.fromCharCode(1));
+				e.preventDefault();
+				break;
+			case 37:
+				ws.send('\x1b[D');
+				e.preventDefault();
+				break;
+			case 38:
+				ws.send('\x1b[A');
+				e.preventDefault();
+				break;
+			case 39:
+				ws.send('\x1b[C');
+				e.preventDefault();
+				break;
+			case 40:
+				ws.send('\x1b[B');
+				e.preventDefault();
+				break;
+		}
+		
+	}).bind("keypress", function(e) {
+		//console.log(e);
+		ws.send(String.fromCharCode(e.keyCode));
+		e.preventDefault();
+	});
+});
+
+function send2server(str) {
+	ws.send(str);
+}
+
+initialize();
+
+</script>
+</head>
+<body>
+
+<div id="res" style="overflow:hidden; overflow-y: hidden; width:100%; height:100%; padding:0; margin:0">
+</div>
+
+
+</body></html>
