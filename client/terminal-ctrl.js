@@ -110,7 +110,7 @@ function ScreenBuffer(container) {
 	}
 }
 
-function init() {
+function init_screen_buffer() {
 	idx = saved_buffers.length;
 	$("#res").html("<div id='bfr" + idx + "'></div>");
 	buffer = new ScreenBuffer($("#bfr" + idx));

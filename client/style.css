@@ -1,0 +1,36 @@
+
+* {
+	-webkit-font-smoothing: antialiased;
+	font-family: monospace, sans-serif;
+	font-size : 14px;
+	color : rgb(227, 227, 217);
+	background-color: rgb(48, 10, 36); 
+	padding:0;
+	margin:0;
+	vertical-align: middle;
+	overflow:hidden;
+}
+
+.bold {
+	font-weight : bold;
+}
+
+.italic {
+	font-style : italic;
+}
+
+.underlined {
+	text-decoration: underline;
+}
+
+.char {
+	height : 16px;
+	width : 1ch;	/* 8.42118 */
+	display:inline-block;
+}
+
+input[type='text'] {
+	border : 0 none;
+	overflow : none;
+}
+			

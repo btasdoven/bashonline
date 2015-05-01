@@ -1,92 +1,51 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)http://tasdoven.ceng.metu.edu.tr/listen80/new.html -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html" charset="UTF-8">
 
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <script src="terminal-parser.js"></script>
 <script src="terminal-ctrl.js"></script>
-<style>
+<link rel="stylesheet" type="text/css" href="style.css">
 
-* {
-	-webkit-font-smoothing: antialiased;
-	font-family: monospace, sans-serif;
-	font-size : 14px;
-	color : rgb(227, 227, 217);
-	background-color: rgb(48, 10, 36); 
-	padding:0;
-	margin:0;
-	vertical-align: middle;
-	overflow:hidden;
-}
-
-.bold {
-	font-weight : bold;
-}
-
-.italic {
-	font-style : italic;
-}
-
-.underlined {
-	text-decoration: underline;
-}
-
-.char {
-	height : 16px;
-	width : 1ch;	/* 8.42118 */
-	display:inline-block;
-}
-
-input[type='text'] {
-	border : 0 none;
-	overflow : none;
-}
-			
-</style>
 <script type="text/javascript">
 
 var ws;
 
-var utfstate = 0;
-function initialize() {
-  if ("WebSocket" in window) {     
-     ws = new WebSocket("ws://144.122.71.77:8080/");
-     ws.onopen = function()
-     {
-     	console.log("connection is opened.");
-     };
-     
-     ws.onmessage = function (e) 
-     { 
-		data = decodeURIComponent(e.data);
-        //console.log(data);
-	    Process(data);
-     }; 
-     
-     ws.onclose = function()
-     { 
-        console.log("Connection is closed..."); 
-     };
-     
-     ws.onerror = function (error) {
-		console.log('WebSocket Error ');
-		console.log(error);
-	 }
-  }
-  else {
-     alert("WebSocket NOT supported by your Browser!");
-  }	
+function init_web_socket() {
+	if ("WebSocket" in window) {     
+		ws = new WebSocket("ws://144.122.71.77:8080/");
+		ws.onopen = function() {
+			console.log("connection is opened.");
+		};
+		 
+		ws.onmessage = function (e) { 
+			data = decodeURIComponent(e.data);
+			//console.log(data);
+			Process(data);
+		}; 
+		
+		ws.onclose = function() { 
+			console.log("Connection is closed..."); 
+		};
+		 
+		ws.onerror = function (error) {
+			console.log('WebSocket Error ');
+			console.log(error);
+		}
+	}
+	else {
+		alert("WebSocket is NOT supported by your browser!");
+	}	
 }
-
-
-var command = ""
 
 $(document).ready( function() {
 	
-	init();
+	init_web_socket();
+	init_screen_buffer();
 		
 	$(document).bind("keydown", function(e) { 
-		//console.log(e);
+		console.log(e);
 
 		if (e.ctrlKey == true && e.keyCode != 17) {
 			key = e.keyCode - 65 + 1;
@@ -126,6 +85,10 @@ $(document).ready( function() {
 				ws.send('\x1b[B');
 				e.preventDefault();
 				break;
+			case 46:	// DEL
+				ws.send(String.fromCharCode(127));
+				e.preventDefault();
+				break;
 		}
 		
 	}).bind("keypress", function(e) {
@@ -133,13 +96,13 @@ $(document).ready( function() {
 		ws.send(String.fromCharCode(e.keyCode));
 		e.preventDefault();
 	});
+	
 });
 
 function send2server(str) {
 	ws.send(str);
 }
 
-initialize();
 
 </script>
 </head>
