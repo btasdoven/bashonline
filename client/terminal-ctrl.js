@@ -13,8 +13,8 @@ var saved_buffers = [];
 function ScreenBuffer(container) {
 	this.curi = 0;
 	this.curj = 0;
-	this.rows = 25;
-	this.cols = 80;
+	this.rows = 25; //parseInt($(window).height() / 18);
+	this.cols = 80; //parseInt($(window).height() / 8.3);
 	
 	this.scrollableTop = 0;
 	this.scrollableBottom = this.rows - 1;
@@ -95,6 +95,7 @@ function ScreenBuffer(container) {
 		this.container.append(footerCont);
 		this.cache = this.cache.concat(footerCache);
 	};
+	
 	
 	// generate `this.rows` number of rows
 	for (i = 0; i < this.rows; ++i) {
@@ -524,4 +525,19 @@ function onDECSTBM(top, bottom) {
 
 function onWindowManip(p0, p1, p2) {
 	console.log("onWindowManip: " + p0 + " " + p1 + " " + p2);
+}
+
+function onDownload(name, base64ctx) {
+			
+	console.log("onDownload: " + name + " " + base64ctx);
+	
+	a = document.createElement('a');
+	//alert(a.download === ''); // If true, this seems to indicate support
+	a.setAttribute('download', name);
+    a.href = base64ctx;
+	a.innerHTML = 'testing';
+	a.style.display = 'none';
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
 }

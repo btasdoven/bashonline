@@ -12,11 +12,12 @@
 
 var ws;
 
-function init_web_socket() {
+function init_web_socket(callback) {
 	if ("WebSocket" in window) {     
 		ws = new WebSocket("ws://144.122.71.77:8080/");
 		ws.onopen = function() {
 			console.log("connection is opened.");
+			callback();
 		};
 		 
 		ws.onmessage = function (e) { 
@@ -41,11 +42,13 @@ function init_web_socket() {
 
 $(document).ready( function() {
 	
-	init_web_socket();
-	init_screen_buffer();
+	init_web_socket( function() {
+		init_screen_buffer();
+	});
+	
 		
 	$(document).bind("keydown", function(e) { 
-		console.log(e);
+		//console.log(e);
 
 		if (e.ctrlKey == true && e.keyCode != 17) {
 			key = e.keyCode - 65 + 1;

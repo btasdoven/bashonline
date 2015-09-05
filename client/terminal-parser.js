@@ -34,6 +34,7 @@ var WXTP_STATE_DCS_IGNORE = 11;
 var WXTP_STATE_OSC_ENTRY = 12;
 var WXTP_STATE_OSC_STRING = 13;
 var WXTP_STATE_SOS_PM_APC_STRING = 14;
+var WXTP_STATE_DLFILE_ENTRY = 15;
 
 var m_collected = Array();	//std::vector<unsigned char> 
 var m_params = Array();	//std::vector<unsigned short> 
@@ -60,7 +61,7 @@ function Process(c)	//unsigned char
 		executeC1ControlCode(c);
 		return;
 	}
-
+	
 	// Real state dependant processing
 	switch(m_state)
 	{
@@ -75,9 +76,8 @@ function Process(c)	//unsigned char
 			{
 				// print
 				onPrintableChar(c);
-			}
-			//  c>= 0x80 && c <= 0x9F : Globally processed
-			else // Extended character / GR Area ( c >= 0xA0 && c <= FF ) => GL  
+			}// Extended character / GR Area ( c >= 0xA0 && c <= FF ) => GL  
+			else 
 			{
 				// print
 				onPrintableChar(c);				
@@ -122,6 +122,10 @@ function Process(c)	//unsigned char
 			{
 				// Ignore
 			}
+			else if(c == 0x5C) 
+			{
+				Transition(WXTP_STATE_DLFILE_ENTRY);
+			} 
 			else
 			{
 				// esc_dispatch // Direct call to onESC(cmd)
@@ -130,6 +134,16 @@ function Process(c)	//unsigned char
 				// goto WXTP_STATE_GROUND
 				Transition(WXTP_STATE_GROUND);
 			}
+			break;
+		}
+		case WXTP_STATE_DLFILE_ENTRY:
+		{
+			if(c == 0x5C) {
+				onDownload(m_collected[0], m_collected[1]);
+				Transition(WXTP_STATE_GROUND);
+			}
+			else
+				DLFILE_Collect(c);
 			break;
 		}
 		case WXTP_STATE_ESCAPE_INTERMEDIATE:
@@ -523,6 +537,7 @@ function Transition(state) //WXTP_STATE
 		case WXTP_STATE_DCS_IGNORE:
 		case WXTP_STATE_OSC_ENTRY:
 		case WXTP_STATE_SOS_PM_APC_STRING:
+		case WXTP_STATE_DLFILE_ENTRY:
 		default:
 			break; /* Nothing specified. */
 	}
@@ -536,6 +551,7 @@ function Transition(state) //WXTP_STATE
 		case WXTP_STATE_CSI_ENTRY:
 		case WXTP_STATE_DCS_ENTRY:
 		case WXTP_STATE_OSC_ENTRY:
+		case WXTP_STATE_DLFILE_ENTRY:
 			Clear();
 			break;
 		case WXTP_STATE_DCS_PASSTHROUGH:
@@ -699,6 +715,15 @@ function Clear()
 {
 	m_collected.clear();
 	m_params.clear();
+}
+
+function DLFILE_Collect(c) {
+	if (c == 0x5E)
+		m_collected.push_back("");
+	else if (m_collected.length == 0)
+		m_collected.push_back(String.fromCharCode(c));
+	else
+		m_collected[m_collected.length-1] += String.fromCharCode(c);
 }
 
 function Collect(c) //unsigned char 

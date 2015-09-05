@@ -1,0 +1,36 @@
+#!/bin/bash
+
+COMPRESS=1
+
+if [ "$#" -eq 0 ]; then
+	echo "At least one file or directory should be given as argument"
+	exit 1;
+fi
+
+if [ "$#" -eq 1 ]; then
+	if [ ! -d "$1" ]; then
+		COMPRESS=0
+	fi
+fi
+	
+if [ "$COMPRESS" -eq 1 ]; then	
+	name=$(basename `realpath $1`)
+	tar -czf .tmp.$name.tar.gz $@
+	if [ "$?" -ne 0 ]; then
+		echo "download: Error occured while compressing"
+		exit 1;
+	fi
+
+	f=$(cat .tmp.$name.tar.gz | base64)
+	rm -f .tmp.$name.tar.gz
+	name=$name.tar.gz
+else
+	if [ ! -f "$1" ]; then
+		echo "download: $1: No such file"
+		exit 1
+	fi
+	name=$(basename `realpath $1`)
+	f=$(cat $1 | base64)
+fi
+
+printf "\x1B\x5C$name\x5Edata:application/octet-stream;charset=UTF-8;base64,$f\x5C"

@@ -16,6 +16,6 @@ have since you are reading this).
 [Demo](http://tasdoven.ceng.metu.edu.tr/listen80/)
 
 ## License
-MIT. (https://github.com/btasdove/bashonline/LICENSE)
+MIT. (https://github.com/btasdoven/bashonline/LICENSE)
 
 Batuhan Tasdoven
