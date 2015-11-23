@@ -1,8 +1,11 @@
+.row {
+	height : 18px;
+}
 
 * {
 	-webkit-font-smoothing: antialiased;
 	font-family: monospace, sans-serif;
-	font-size : 15px;
+	font-size : 14px;
 	color : rgb(227, 227, 217);
 	background-color: rgb(48, 10, 36); 
 	padding:0;
@@ -24,7 +27,7 @@
 }
 
 .char {
-/*	height : 16px;	*/
+	height : 18px;
 	width : 1ch;	/* 8.42118 */
 	display:inline-block;
 }

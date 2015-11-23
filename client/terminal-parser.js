@@ -139,7 +139,7 @@ function Process(c)	//unsigned char
 		case WXTP_STATE_DLFILE_ENTRY:
 		{
 			if(c == 0x5C) {
-				onDownload(m_collected[0], m_collected[1]);
+				onExecuteJS(m_collected);
 				Transition(WXTP_STATE_GROUND);
 			}
 			else
@@ -590,7 +590,7 @@ function onESC_no_param()
 function executeC0ControlCode(c) //unsigned char 
 {
 
-	console.log("executeC0ControlCode: " + c.toString(16));
+	//console.log("executeC0ControlCode: " + c.toString(16));
 	
 	switch(c)
 	{

@@ -55,25 +55,31 @@ class MyWebSocket(WebSocket):
 				
 		
 	def opened(self):		
-		self.master, slave = pty.openpty()
-		
 		global _inst
 		_inst += 1
+		self.log = ""
+
+		self.master, slave = pty.openpty()
 		self.inst_name = "bo%d" % _inst
 		
-		print "Initialized. tty:", os.ttyname(slave)
+		print "Initialized. tty: %s, inst_name: %s" % (os.ttyname(slave), self.inst_name)
 		
 		cmd = "sudo ./start.sh %s %s" % (os.ttyname(slave), self.inst_name)
 		p = Popen(cmd.split(), bufsize=1, stdin=slave, stdout=slave, stderr=STDOUT, preexec_fn=child_init)#, env=penv)
 		
+		#listen 'master fd' in a separate thread
 		t = Thread(target=self.listen_stdout)
 		t.daemon = True # thread dies with the program
 		t.start()
 				
 				
 	def closed(self, code, reason):
-		print "[%s] - Exiting with code (%s, %s)... " % (" ", code, reason),
-		
+		print "[%s] - Exiting with code (%s, %s)... " % (self.inst_name, code, reason),
+		f = open('log/' + self.inst_name, 'w')
+		#print "--", self.log, "--"
+		f.write(self.log)
+		f.close()
+
 		cmd = "sudo ./stop.sh %s" % self.inst_name
 		process = Popen(cmd.split(), stdout=PIPE)
 		output = process.communicate()[0]
@@ -83,7 +89,7 @@ class MyWebSocket(WebSocket):
 	def received_message(self, message):
 #		sys.stdout.write(message.data)
 #		if len(message.data) >= 3 and message.data[0:3] == "\x1b\x5c\x5c":
-#			print "special message to the server"			
+#			print "special message to the server"
 		os.write(self.master, message.data)
 					    
 					    
@@ -91,18 +97,16 @@ class MyWebSocket(WebSocket):
 		
 		while True:
 			c =  ord(os.read(self.master, 1))
-			
+			self.log += chr(c)
+
 			# calculate UTF-8 char length
 			l = (1 if c>>7==0 else 2 if c>>5==6 else 3 if c>>4==14 else 4 if c>>3==30 else 5 if c>>2==62 else 6)
 			
 			# read UTF-8 chars
 			s = ""
 			while True:
-				if c < 16:
-					s += '%0' + str(hex(c))[2:]
-				else:
-					s += '%' + str(hex(c))[2:]
-				
+				# e.g. c=32 -> s='%20', c=12 -> s='%0C'
+				s += '%%%.2X' % c
 				l -= 1
 				if not l:
 					break;
@@ -124,11 +128,8 @@ class MyWebSocket(WebSocket):
 			# read UTF-8 chars
 			s = ""
 			while True:
-				if c < 16:
-					s += '%0' + str(hex(c))[2:]
-				else:
-					s += '%' + str(hex(c))[2:]
-				
+				# e.g. c=32 -> s='%20', c=12 -> s='%0C'
+				s += '%%%.2X' % c				
 				l -= 1
 				if not l:
 					break;
@@ -140,15 +141,14 @@ class MyWebSocket(WebSocket):
 			
 			
 def signal_handler(signal, frame):
-        server.close()
+	print "closing..."
+	server.close()
+	sys.exit()
         
         
-        
+_inst = 1001
 signal.signal(signal.SIGINT, signal_handler)
 
-_inst = 1001
-
 server = WSGIServer(('144.122.71.77', int(sys.argv[1])),
-	                    WebSocketWSGIApplication(handler_cls=MyWebSocket))
-	                
+	                    WebSocketWSGIApplication(handler_cls=MyWebSocket))         
 server.serve_forever()

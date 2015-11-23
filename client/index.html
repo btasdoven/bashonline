@@ -6,6 +6,7 @@
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <script src="terminal-parser.js"></script>
 <script src="terminal-ctrl.js"></script>
+<script src="upclick.js"></script>
 <link rel="stylesheet" type="text/css" href="style.css">
 
 <script type="text/javascript">
@@ -16,7 +17,7 @@ function init_web_socket(callback) {
 	if ("WebSocket" in window) {     
 		ws = new WebSocket("ws://144.122.71.77:8080/");
 		ws.onopen = function() {
-			console.log("connection is opened.");
+			//console.log("connection is opened.");
 			callback();
 		};
 		 
@@ -48,7 +49,7 @@ $(document).ready( function() {
 	
 		
 	$(document).bind("keydown", function(e) { 
-		//console.log(e);
+//		console.log(e);
 
 		if (e.ctrlKey == true && e.keyCode != 17) {
 			key = e.keyCode - 65 + 1;
@@ -72,7 +73,7 @@ $(document).ready( function() {
 				ws.send(String.fromCharCode(1));
 				e.preventDefault();
 				break;
-			case 37:
+			case 37:	// ARROW KEYS
 				ws.send('\x1b[D');
 				e.preventDefault();
 				break;
@@ -95,7 +96,6 @@ $(document).ready( function() {
 		}
 		
 	}).bind("keypress", function(e) {
-		//console.log(e);
 		ws.send(String.fromCharCode(e.keyCode));
 		e.preventDefault();
 	});

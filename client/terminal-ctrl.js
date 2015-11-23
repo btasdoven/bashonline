@@ -13,9 +13,10 @@ var saved_buffers = [];
 function ScreenBuffer(container) {
 	this.curi = 0;
 	this.curj = 0;
-	this.rows = 25; //parseInt($(window).height() / 18);
-	this.cols = 80; //parseInt($(window).height() / 8.3);
+	this.rows = parseInt($(window).height() / 18);
+	this.cols = parseInt($(window).width() / 9.016);
 	
+	console.log("new buffer:" + container + " " + this.rows + " " + this.cols);
 	this.scrollableTop = 0;
 	this.scrollableBottom = this.rows - 1;
 		
@@ -79,7 +80,8 @@ function ScreenBuffer(container) {
 		
 		this.cache = this.cache.slice(0, this.scrollableBottom+1);
 		this.cache = this.cache.slice(0, startingRow).concat(this.cache.slice(startingRow+n));		
-		this.curi -= n;		
+		if (this.curi > startingRow)
+			this.curi -= n;		
 		
 		for (i = 0; i < n; ++i) {
 			this.cache.push([]);
@@ -109,6 +111,7 @@ function ScreenBuffer(container) {
 		}
 		this.container.append(r);
 	}
+	
 }
 
 function init_screen_buffer() {
@@ -116,7 +119,7 @@ function init_screen_buffer() {
 	$("#res").html("<div id='bfr" + idx + "'></div>");
 	buffer = new ScreenBuffer($("#bfr" + idx));
 	saved_buffers.push(buffer);
-	
+			
 	$('html, body').scrollTop(0);
 	
 	setInterval( function() {
@@ -125,7 +128,7 @@ function init_screen_buffer() {
 			cell.toggleClass("cursorblink");
 			_invert(cell);
 		}
-	}, 500);
+	}, 600);
 }
 
 function _invert(cell) {
@@ -135,7 +138,7 @@ function _invert(cell) {
 }
 
 function onPrintableChar(c) {
-	console.log("Print: " + String.fromCharCode(c));
+//	console.log("Print: " + String.fromCharCode(c));
 	
 	cell = buffer.getCell(buffer.curi, buffer.curj);
 	if (cell.hasClass("cursorblink")) {
@@ -156,7 +159,7 @@ function onPrintableChar(c) {
     if (buffer.curj == buffer.cols) {
     	buffer.curi++;    
 		buffer.curj = 0;
-		if (buffer.curi == buffer.scrollableBottom + 1) {
+		if (buffer.curi > buffer.scrollableBottom) {
 			buffer.deleteRows(buffer.scrollableTop, 1);
 			$('html, body').scrollTop((buffer.curi+1) * 18 - $(window).height());
 		}
@@ -176,6 +179,18 @@ function onCUP(row, col) {
 	buffer.curi = row - 1;
 	buffer.curj = col - 1;
 	$('html, body').scrollTop((buffer.curi+1) * 18 - $(window).height());
+}
+
+// CSI Ps G  Cursor Character Absolute  [column] (default = [row,1]) (CHA).
+function onCHA(params) {
+	console.log("onCHA: Cursor Character Absolute [ Column: " + params + "]");	
+	cell = buffer.getCell(buffer.curi, buffer.curj);
+	if (cell.hasClass("cursorblink")) {
+		cell.removeClass("cursorblink");
+		_invert(cell);
+	}
+	
+	buffer.curj = params;
 }
 
 /* CSI Ps J  Erase in Display (ED).
@@ -216,10 +231,9 @@ function onLF() {
 	
 	buffer.curi++;	
 	if (buffer.curi > buffer.scrollableBottom) {
-		buffer.deleteRows(buffer.scrollableTop, 1);		
+		buffer.deleteRows(buffer.scrollableTop, 1);
+	    //$('html, body').scrollTop((buffer.curi+1) * 18 - $(window).height());
     }
-	
-    $('html, body').scrollTop((buffer.curi+1) * 18 - $(window).height());
 }
 
 
@@ -439,6 +453,10 @@ function onCUF(params) {
 	}
 	
 	buffer.curj += params;
+	if (buffer.curj >= buffer.cols) {
+		buffer.curj %= buffer.cols;
+		buffer.curi = Math.min(buffer.curi + 1, buffer.rows-1);
+	}
 }
 
 // CSI Ps A  Cursor Up Ps Times (default = 1) (CUU).
@@ -450,7 +468,19 @@ function onCUU(params) {
 		_invert(cell);
 	}
 	
-	buffer.curi = Math.max(0, buffer.curi-1);
+	buffer.curi = Math.max(0, buffer.curi-params);
+}
+
+// CSI Ps B  Cursor Down Ps Times (default = 1) (CUD).
+function onCUD(params) {
+	console.log("onCUU: Cursor Up " + params + " Times");
+	cell = buffer.getCell(buffer.curi, buffer.curj);
+	if (cell.hasClass("cursorblink")) {
+		cell.removeClass("cursorblink");
+		_invert(cell);
+	}
+	
+	buffer.curi = Math.min(buffer.rows-1, buffer.curi+params);
 }
 
 // CSI Ps T  Scroll down Ps lines (default = 1) (SD).
@@ -461,7 +491,7 @@ function onSD(params) {
 
 // CSI Ps L  Insert Ps Line(s) (default = 1) (IL).
 function onIL(params) {
-	console.log("%c onIL: Insert " + params + " line(s)", 'background: #ff0000; color: #ffffff');
+	console.log("onIL: Insert " + params + " line(s)");
 	if (buffer.curi + params > buffer.scrollableBottom)
 		buffer.deleteRows(buffer.scrollableTop, buffer.curi + params - buffer.scrollableBottom);
 	
@@ -504,6 +534,7 @@ function onICH(params) {
           Result is CSI r ; c R	*/
 function onDSR(params) {
 	console.log("onDSR: Device Status Report. Params: " + params);
+	console.log("r;c=" + buffer.curi + ";" + buffer.curj);
 	switch(params) {
 		case 5:
 			send2server("\x1b[0R");
@@ -518,6 +549,10 @@ function onDSR(params) {
           Set Scrolling Region [top;bottom] (default = full size of win-
           dow) (DECSTBM).	*/
 function onDECSTBM(top, bottom) {
+	
+	if (typeof top == 'undefined')		top = 1;
+	if (typeof bottom == 'undefined')	bottom = buffer.rows;
+	
 	console.log("onDECSTBM: Set Scrolling Region [" + top + ";" + bottom + "]");
 	buffer.scrollableTop = top - 1;
 	buffer.scrollableBottom = bottom - 1;
@@ -525,19 +560,58 @@ function onDECSTBM(top, bottom) {
 
 function onWindowManip(p0, p1, p2) {
 	console.log("onWindowManip: " + p0 + " " + p1 + " " + p2);
+	
+	switch (p0) {
+		case 8:
+			buffer.rows = p1;
+			buffer.cols = p2;
+			break;
+		case 18:
+			send2server("\x1b[8;" + buffer.rows + ";" + buffer.cols + "t");
+			break;
+	}
+
 }
 
-function onDownload(name, base64ctx) {
+function onExecuteJS(param) {
 			
-	console.log("onDownload: " + name + " " + base64ctx);
+	console.log("onExecuteJS: " + param);
 	
-	a = document.createElement('a');
-	//alert(a.download === ''); // If true, this seems to indicate support
-	a.setAttribute('download', name);
-    a.href = base64ctx;
-	a.innerHTML = 'testing';
-	a.style.display = 'none';
+	/*
+	a=document.createElement('input');
+	a.setAttribute('id', 'inp123');
+	a.setAttribute('type','button');
+	a.setAttribute('onchange','uploadFile()');	
+//	a.innerHTML='<script> function uploadFile() { b = 5; alert(b); document.body.removeChild(a); } </script>';
+//	a.style.display='none';
 	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
+	$("#inp123").show().focus().click().hide();
+	
+	var uploader = document.getElementById('inp123');
+	
+	upclick(
+     {
+      element: uploader,
+      action: '/path_to/you_server_script.php', 
+      onstart:
+        function(filename)
+        {
+          alert('Start upload: '+filename);
+        },
+      oncomplete:
+        function(response_data) 
+        {
+          alert(response_data);
+        }
+     });
+	
+	<input type="file" onchange="previewFile()">
+	var reader  = new FileReader();
+	reader.onloadend = function () {alert(reader.result);};
+	reader.readAsDataURL('~/upload');
+	*/
+	
+	for (i = 0; i < param.length; ++i)
+		eval(param[i]);	
 }
+

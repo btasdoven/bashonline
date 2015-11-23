@@ -1,13 +1,13 @@
 #!/bin/bash
 
 function print {
-	python -c "import sys;sys.stdout.write(sys.argv[1].decode('unicode-escape'))" "$1"
+	python -c "import sys;sys.stdout.write(sys.argv[1].decode('unicode-escape').encode('utf-8'))" "$1"
 }
 
 function draw_menu {
 	
 	# get screen size as COLS and ROWS
-	sudo bash /var/lib/lxc/deneme/rootfs/usr/bin/scrsize set 
+	sudo bash /var/lib/lxc/guest-mac/rootfs/usr/bin/scrsize set 
 	IFS=', ' read ROWS COLS <<< $(stty size)
 
 	len=0	
@@ -75,17 +75,24 @@ function draw_menu {
 }
 
 function log_in {
-	read -p "Username: " username
+	read -p "Username: " -e username
 	read -s -p "Password: " password
 	print "\n"	
 	
 	correct=$(./login.sh $username $password)
 	
+	trial=2
 	while [ "$correct" == "0" ]; 
 	do
+		if [ $trial -lt 1 ]; then
+			print "\nYou have 3 unsuccessful attempts.\n"
+			return 1
+		fi
+		trial=$((trial-1))
+
 		sleep 3
 		print "\nLogin incorrect\n"		
-		read -p "Username: " username
+		read -p "Username: " -e username
 		read -s -p "Password: " password
 		print "\n"		
 		
@@ -102,7 +109,7 @@ function log_in {
 	
 	while true
 	do
-		read machine
+		read -e machine
 		
 		re='^[0-9]+$'
 		if ! [[ $machine =~ $re ]] ; then
@@ -112,7 +119,7 @@ function log_in {
 		
 		machine=$((machine-1))
 		if [ "x${machines[machine]}" != "x" ]; then
-			echo ${machines[machine]} > $INST_NAME.alias
+			echo ${machines[machine]} > alias/$INST_NAME.alias
 			print "${machines[machine]} is initializing..."
 			sudo lxc-start -c $TTY_SLAVE -n ${machines[machine]}
 			break			
@@ -120,41 +127,47 @@ function log_in {
 			print "\nIncorrect machine number. Select one of them: "
 		fi
 	done
+
+	return 0
 }
 
 function guest_session {
-	print "A machine is being created...\n"			
-	sudo lxc-clone -H -o deneme -n $INST_NAME
-	sudo sed -i s/deneme/$INST_NAME/ /var/lib/lxc/$INST_NAME/fstab
+	print "A machine is being created... It may take a while...\n"			
+	sudo lxc-clone -H -o guest-mac -n $INST_NAME
+	sudo sed -i s/guest-mac/$INST_NAME/ /var/lib/lxc/$INST_NAME/fstab
 	print "Machine is initializing...\n"	
 	sudo lxc-start -c $TTY_SLAVE -n $INST_NAME
+	return 0
 }
 
-
+function create_account {
+	./create_account.sh
+	return 1
+}
 
 TTY_SLAVE=$1
 INST_NAME=$2
 
 
-draw_menu "LOG IN" "GUEST SESSION" "SIGN UP" 
-	
-while true
+ret=1	
+while [ $ret -ne 0 ]
 do
-	read -p "Select one of the above choices by typing 1, 2 or 3: " choice
+	draw_menu "LOG IN" "GUEST SESSION" "SIGN UP" 
+	read -p "Select one of the above choices by typing 1, 2 or 3: " -e choice
 	
-	if [ "$choice" == "3" ]; then
-		print "We do not currently accept new registrations. Still, you can use Guest Session.\n"
-	elif [ "$choice" == "1" ] || [ "$choice" == "2" ]; then
-		break
+	if [ "$choice" == "1" ]; then
+		log_in
+		ret=$?
+	elif [ "$choice" == "2" ]; then
+		guest_session
+		ret=$?
+	elif [ "$choice" == "3" ]; then
+		create_account
+		ret=$?
+	else
+		print "\x1b[2J\x1b[H"
+		ret=1
 	fi
 done
-
-if [ "$choice" == "1" ]; then
-	log_in
-elif [ "$choice" == "2" ]; then
-	guest_session
-fi
-
-
 
 
